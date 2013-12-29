@@ -1,5 +1,6 @@
 package controllers;
 
+import play.libs.F;
 import play.mvc.*;
 import play.data.*;
 import static play.data.Form.*;
@@ -36,14 +37,27 @@ public class Application extends Controller {
      * @param order Sort order (either asc or desc)
      * @param filter Filter applied on computer names
      */
-    @Transactional(readOnly=true)
+   // @Transactional(readOnly=false)
     public static Result list(int page, String sortBy, String order, String filter) {
-        return ok(
-            list.render(
-                Computer.page(page, 10, sortBy, order, filter),
-                sortBy, order, filter
-            )
-        );
+        final int fPage = page;
+        final String fSortBy = sortBy;
+        final String fOrder = order;
+        final String fFilter = filter;
+        try {
+            Content content = JPA.withTransaction(new F.Function0<Content>() {
+                @Override
+                public Content apply() throws Throwable {
+                    return list.render(
+                            Computer.page(fPage, 10, fSortBy, fOrder, fFilter),
+                            fSortBy, fOrder, fFilter
+                    );
+                }
+            });
+            return ok(content);
+        } catch (Throwable th) {
+            th.printStackTrace();
+            return badRequest();
+        }
     }
     
     /**
